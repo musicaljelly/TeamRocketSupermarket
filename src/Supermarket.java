@@ -4,6 +4,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import com.teamrocket.supermarket.gui.SuperMarketFrame;
+
 
 
 public class Supermarket {
@@ -15,7 +17,7 @@ public class Supermarket {
 	    try {
 	    	
 	    	DriverManager.registerDriver(new oracle.jdbc.driver.OracleDriver());
-			connection = DriverManager.getConnection("jdbc:oracle:thin:@dbhost.ugrad.cs.ubc.ca:1522:ug", "ora_a5b8", "a31288111");
+			connection = DriverManager.getConnection("jdbc:oracle:thin:@dbhost.ugrad.cs.ubc.ca:1522:ug", "ora_a1e8", "a35683119");
 			
 		} catch (SQLException e) {
 			
@@ -39,8 +41,8 @@ public class Supermarket {
 				System.out.println(rs.getString("NAME"));
 			}
 			
-			statement.close();
-			connection.close();
+//			statement.close();
+//			connection.close();
 			
 		} catch (SQLException e) {
 			
@@ -49,8 +51,10 @@ public class Supermarket {
 			
 		}
 		
+		SuperMarketFrame frame = new SuperMarketFrame(connection);
 		
-		System.out.println("If you can read this, things are probably working just fine!");
+		frame.pack();
+		frame.setVisible(true);
 	}
 
 }
