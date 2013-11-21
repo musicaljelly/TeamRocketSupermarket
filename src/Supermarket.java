@@ -1,8 +1,8 @@
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 
 import com.teamrocket.supermarket.gui.SuperMarketFrame;
 
@@ -17,7 +17,12 @@ public class Supermarket {
 	    try {
 	    	
 	    	DriverManager.registerDriver(new oracle.jdbc.driver.OracleDriver());
-			connection = DriverManager.getConnection("jdbc:oracle:thin:@dbhost.ugrad.cs.ubc.ca:1522:ug", "ora_a1e8", "a35683119");
+	    	
+	    	// Will's login
+			//connection = DriverManager.getConnection("jdbc:oracle:thin:@dbhost.ugrad.cs.ubc.ca:1522:ug", "ora_a1e8", "a35683119");
+	    	
+	    	// Lewis's login
+	    	connection = DriverManager.getConnection("jdbc:oracle:thin:@dbhost.ugrad.cs.ubc.ca:1522:ug", "ora_a5b8", "a31288111");
 			
 		} catch (SQLException e) {
 			
@@ -31,30 +36,23 @@ public class Supermarket {
 		
 		initConnection();
 		
-		Statement statement;
-		
-		try {
-			
-			statement = connection.createStatement();
-			ResultSet rs = statement.executeQuery("SELECT * FROM member");
-			while (rs.next()) {
-				System.out.println(rs.getString("NAME"));
-			}
-			
-//			statement.close();
-//			connection.close();
-			
-		} catch (SQLException e) {
-			
-			e.printStackTrace();
-			System.out.println("SQLException. Something went wrong when running the query.");
-			
-		}
-		
 		SuperMarketFrame frame = new SuperMarketFrame(connection);
 		
 		frame.pack();
 		frame.setVisible(true);
+		
+		frame.addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowClosing(WindowEvent event) {
+				try {
+					connection.close();
+					System.exit(0);
+				} catch (SQLException e) {
+					e.printStackTrace();
+					System.out.println("Error while closing the connection upon program exit.");
+				}
+			}
+		});
 	}
 
 }
