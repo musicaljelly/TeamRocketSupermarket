@@ -38,7 +38,8 @@ public class Supermarket {
 		
 		SuperMarketFrame frame = new SuperMarketFrame(connection);
 		
-		frame.pack();
+		//frame.pack();
+		frame.setSize(1280, 720);
 		frame.setVisible(true);
 		
 		frame.addWindowListener(new WindowAdapter() {
