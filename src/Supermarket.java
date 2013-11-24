@@ -26,6 +26,8 @@ public class Supermarket extends JFrame {
 	    	
 	    	// Lewis's login
 	    	connection = DriverManager.getConnection("jdbc:oracle:thin:@dbhost.ugrad.cs.ubc.ca:1522:ug", "ora_a5b8", "a31288111");
+	    	
+	    	connection.setAutoCommit(false);
 			
 		} catch (SQLException e) {
 			
