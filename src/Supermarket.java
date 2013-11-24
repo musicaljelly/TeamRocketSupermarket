@@ -4,15 +4,18 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+
 import com.teamrocket.supermarket.gui.SuperMarketFrame;
 
 
 
-public class Supermarket {
+public class Supermarket extends JFrame {
 	
 	static Connection connection = null;
 	
-	public static void initConnection() {
+	public static void initConnection() throws SQLException{
 
 	    try {
 	    	
@@ -27,12 +30,15 @@ public class Supermarket {
 		} catch (SQLException e) {
 			
 			e.printStackTrace();
-			System.out.println("Something went horribly wrong.");
+			System.out.println("Failed to connect to Database");
+			JOptionPane.showMessageDialog(null, "Failed to connect to database", "Failed to connect to database", JOptionPane.ERROR_MESSAGE);	
 			
+
 		}
 	}
 	
-	public static void main(String[] args) {
+	
+	public static void main(String[] args) throws SQLException {
 		
 		initConnection();
 		
@@ -51,6 +57,8 @@ public class Supermarket {
 				} catch (SQLException e) {
 					e.printStackTrace();
 					System.out.println("Error while closing the connection upon program exit.");
+					JOptionPane.showMessageDialog(null, "Error while closing the connection upon program exit", "Error while closing the connection upon program exit", JOptionPane.ERROR_MESSAGE);	
+
 				}
 			}
 		});
