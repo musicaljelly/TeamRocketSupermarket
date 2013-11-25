@@ -36,6 +36,8 @@ CREATE TABLE Product(
 		price number(6,2) NOT NULL,
 		expiry date
 		);
+-- If check constraints were supported, we would add the following constraint (amongst many possible others) to the above table:
+        -- CONSTRAINT chk_stock CHECK (stock >= 0)
 		
 CREATE TABLE Updates(
 		upid number(9,0) PRIMARY KEY,
@@ -154,6 +156,9 @@ insert into Transaction(tid,quantity,tdate,amount,pid,eid,type)
 	values (10,1,'2013-10-22',20.25,298774445,945214963,'Purchase');
 insert into Transaction(tid,quantity,tdate,amount,pid,eid,type,refid) 
 	values (11,3,'2013-10-23',24.00,111548445,952348594,'Return',9);
+    
+insert into Transaction(tid, quantity, tdate, amount, pid,eid,mid,type)
+    values (20, 2, '2013-10-17', 23.75, 282058287,952348594,854112041,'Purchase');
 
 insert into CashTransaction(tid) values (1);
 insert into CashTransaction(tid) values (2);

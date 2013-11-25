@@ -72,6 +72,10 @@ public class SuperMarketFrame extends JFrame {
 	JButton groupByDateButton;
 	JButton groupByNameButton; 
 	
+	JButton showOnlyRelevantMembersButton;
+	
+	boolean showOnlyRelevantMembers = false;
+	
 	
 	public SuperMarketFrame(Connection conn) {
 		super("Supermarket Application");
@@ -130,7 +134,36 @@ public class SuperMarketFrame extends JFrame {
 		memberTablePanel = new JPanel();
 		memberTablePanel.setPreferredSize(new Dimension(600, 250));
 		memberTablePanel.setLayout(new BoxLayout(memberTablePanel, BoxLayout.PAGE_AXIS));
-		memberTablePanel.add(new JLabel("Members"));
+		
+		JPanel memberLabelAndButton = new JPanel();
+		memberLabelAndButton.add(new JLabel("Members                                            "));
+		
+		showOnlyRelevantMembersButton = new JButton("Show Only Relevant Members");
+		showOnlyRelevantMembersButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent event) {
+				if (userID == -1) {
+					JOptionPane.showMessageDialog(null, "Select a user ID first.");
+					return;
+				}
+				
+				if (showOnlyRelevantMembers) {
+					showOnlyRelevantMembersButton.setText("Show Only Relevant Members");
+					showOnlyRelevantMembers = false;
+				} else {
+					showOnlyRelevantMembersButton.setText("Show All Members");
+					showOnlyRelevantMembers = true;
+				}
+				
+				try {
+					populateMemberTable();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+			}
+		});
+		memberLabelAndButton.add(showOnlyRelevantMembersButton);
+		memberTablePanel.add(memberLabelAndButton);
 		memberTablePanel.add(new JScrollPane(memberTable));
 
 		// Create the transaction table
@@ -276,6 +309,12 @@ public class SuperMarketFrame extends JFrame {
 		
 		isGroupingByDate = false;
 		groupByDateButton.setText("Group By Date");
+		
+		isGroupingByName = false;
+		groupByNameButton.setText("Group By PID");
+		
+		showOnlyRelevantMembers = false;
+		showOnlyRelevantMembersButton.setText("Show Only Relevant Members");
 
 		try {
 			statement = connection.createStatement();
@@ -599,14 +638,13 @@ public class SuperMarketFrame extends JFrame {
 		
 		ResultSet allMembers;
 		
-		if (productTable.getSelectedRowCount() > 0) {
+		if (productTable.getSelectedRowCount() > 0 && showOnlyRelevantMembers) {
 			memberStatement.executeUpdate("CREATE TABLE temp_pids(temppid number(9,0) PRIMARY KEY)");
 			
 			for (int rowIndex : productTable.getSelectedRows()) {
 				int pid = (int)productTable.getValueAt(productTable.convertRowIndexToModel(rowIndex), productTable.convertColumnIndexToModel(0));
 				memberStatement.executeUpdate("INSERT INTO temp_pids (temppid) values (" + pid + ")");
 			}
-			connection.commit();
 			
 			finalStatement.executeQuery("CREATE OR REPLACE VIEW tempmembers AS " + 
 										 "SELECT mid FROM Transaction " +
@@ -617,7 +655,7 @@ public class SuperMarketFrame extends JFrame {
 			allMembers = finalStatement.executeQuery("SELECT * FROM Member INNER JOIN tempmembers ON Member.mid = tempmembers.mid");
 			
 			memberStatement.executeUpdate("DROP TABLE temp_pids");
-			connection.commit();
+			memberStatement.executeUpdate("DROP VIEW tempmembers");
 		} else {
 			allMembers = memberStatement.executeQuery("SELECT * FROM Member");
 		}
@@ -828,6 +866,12 @@ public class SuperMarketFrame extends JFrame {
 	
 	
 	private Object validateTableUpdate(String table, String column, String newValue) {
+		
+		/* -------- NOTE -----------
+		 If the version of SQL we are using supported CHECK constraints, we would use those.
+		 Instead, we're doing input validation at the application level.
+		 See the DDL (I've left a comment) for an example of what this might have looked like.
+		 */
 		
 		// If nothing was changed, don't update
 		if (oldUpdateValue != null && oldUpdateValue.equals(newValue)) {
