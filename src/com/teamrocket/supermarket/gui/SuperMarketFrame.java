@@ -61,6 +61,9 @@ public class SuperMarketFrame extends JFrame {
 	int oldUpdateID;
 	boolean ignoreNextUpdate = false;
 	
+	int userType;
+	int userID;
+	
 	
 	public SuperMarketFrame(Connection conn) {
 		super("Supermarket Application");
@@ -148,19 +151,15 @@ public class SuperMarketFrame extends JFrame {
 		userTypeList.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
 				JComboBox<String> userlist = (JComboBox) event.getSource();
-				// Index will be from 0 to 3
-				int index = userlist.getSelectedIndex();
 
 				pendingUpdates.clear();
 				
-				setUserType(index, userIDList, tablePanel);
+				setUserType(userlist.getSelectedIndex(), userIDList, tablePanel);
 			}
 		});
 
 		userIDList.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
-				
-				int typeIndex = userTypeList.getSelectedIndex();
 
 				JComboBox<String> idlist = (JComboBox) event.getSource();
 				int userIdIndex = idlist.getSelectedIndex();
@@ -168,15 +167,19 @@ public class SuperMarketFrame extends JFrame {
 				pendingUpdates.clear();
 
 				if (userIdIndex > 0) {
+					
+					userID = currentIDs.get(userIdIndex);
+					
 					try {
-						populateProductTable(typeIndex);
-						populateMemberTable(typeIndex);
-						populateTransactionTable(typeIndex, currentIDs.get(userIdIndex));
+						populateProductTable();
+						populateMemberTable();
+						populateTransactionTable();
 					} catch (SQLException e) {
 						e.printStackTrace();
 					}
 					
 				} else {
+					userID = -1;
 					clearAllTables();
 				}
 			}
@@ -185,8 +188,6 @@ public class SuperMarketFrame extends JFrame {
 		accDetailsButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				// TODO Auto-generated method stub
-				int userType = userTypeList.getSelectedIndex();
 				JDialog dialog;
 				
 				if (userType == 0) {
@@ -226,14 +227,14 @@ public class SuperMarketFrame extends JFrame {
 		setUserType(0, userIDList, tablePanel);
 
 		try {
-			populateProductTable(userTypeList.getSelectedIndex());
+			populateProductTable();
 		} catch (SQLException e) {
 			e.printStackTrace();
 			System.out.println("Hit an SQLException during the initial population of the product table.");
 		}
 	}
 
-	public void setUserType(int userType, JComboBox<String> userIDList, JPanel tablePanel) {
+	public void setUserType(final int newUserType, JComboBox<String> userIDList, JPanel tablePanel) {
 		userIDList.removeAllItems();
 
 		transactionTable.removeAll();
@@ -242,6 +243,8 @@ public class SuperMarketFrame extends JFrame {
 
 		currentIDs.clear();
 		currentIDs.add(-1);
+		
+		userType = newUserType;
 
 		CardLayout cardLayout = (CardLayout) tablePanel.getLayout();
 		cardLayout.show(tablePanel, userTypes[userType]);
@@ -263,7 +266,7 @@ public class SuperMarketFrame extends JFrame {
 				productTable.setPreferredScrollableViewportSize(new Dimension(1200, 550));
 				visitorPanel.removeAll();
 				visitorPanel.add(productTablePanel);
-				populateProductTable(0);
+				populateProductTable();
 
 			} else if (userType == 1) {
 				memberPanel.removeAll();
@@ -302,14 +305,20 @@ public class SuperMarketFrame extends JFrame {
 				discardButton.addActionListener(new ActionListener() {
 					@Override
 					public void actionPerformed(ActionEvent e) {
-						// TODO: delete row(s) from DB
-						JOptionPane.showConfirmDialog(null, "Are you sure you want to discard changes?", "Confirm",
-								JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+						if (pendingUpdates.size() <= 0) {
+							JOptionPane.showMessageDialog(null, "Nothing to discard.");
+						} else {
+							int result = JOptionPane.showConfirmDialog(null, "Are you sure you want to discard changes?", "Confirm",
+									JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+							if (result == JOptionPane.YES_OPTION) {
+								pendingUpdates.clear();
+								refreshTables();
+							}
+						}
 					}
 				});
 				buttonPanel.add(discardButton);
 				
-				// Handler for pressing the update button
 				JButton updateButton = new JButton("Update");
 				updateButton.addActionListener(new ActionListener() {
 					@Override
@@ -321,6 +330,7 @@ public class SuperMarketFrame extends JFrame {
 									JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 							if (result == JOptionPane.YES_OPTION) {
 								commitPendingUpdates();
+								refreshTables();
 							}
 						}
 					}
@@ -331,9 +341,16 @@ public class SuperMarketFrame extends JFrame {
 				deleteButton.addActionListener(new ActionListener() {
 					@Override
 					public void actionPerformed(ActionEvent e) {
-						// TODO: delete row(s) from DB
-						JOptionPane.showConfirmDialog(null, "Are you sure you want to delete?", "Confirm",
-								JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+						if (productTable.getSelectedRowCount() == 0) {
+							JOptionPane.showMessageDialog(null, "No rows selected to delete.");
+						} else {
+							int result = JOptionPane.showConfirmDialog(null, "Are you sure you want to delete the selected rows?", "Confirm",
+									JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+							if (result == JOptionPane.YES_OPTION) {
+								deleteSelectedRows();
+								refreshTables();
+							}
+						}
 					}
 				});
 				buttonPanel.add(deleteButton);
@@ -362,14 +379,20 @@ public class SuperMarketFrame extends JFrame {
 				discardButton.addActionListener(new ActionListener() {
 					@Override
 					public void actionPerformed(ActionEvent e) {
-						// TODO: delete row(s) from DB
-						JOptionPane.showConfirmDialog(null, "Are you sure you want to discard changes?", "Confirm",
-								JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+						if (pendingUpdates.size() <= 0) {
+							JOptionPane.showMessageDialog(null, "Nothing to discard.");
+						} else {
+							int result = JOptionPane.showConfirmDialog(null, "Are you sure you want to discard changes?", "Confirm",
+									JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+							if (result == JOptionPane.YES_OPTION) {
+								pendingUpdates.clear();
+								refreshTables();
+							}
+						}
 					}
 				});
 				buttonPanel.add(discardButton);
 
-				// Handler for pressing update button
 				JButton updateButton = new JButton("Update");
 				updateButton.addActionListener(new ActionListener() {
 					@Override
@@ -381,6 +404,7 @@ public class SuperMarketFrame extends JFrame {
 									JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 							if (result == JOptionPane.YES_OPTION) {
 								commitPendingUpdates();
+								refreshTables();
 							}
 						}
 					}
@@ -391,9 +415,16 @@ public class SuperMarketFrame extends JFrame {
 				deleteButton.addActionListener(new ActionListener() {
 					@Override
 					public void actionPerformed(ActionEvent e) {
-						// TODO: delete row(s) from DB
-						JOptionPane.showConfirmDialog(null, "Are you sure you want to delete?", "Confirm",
-								JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+						if (productTable.getSelectedRowCount() == 0 && memberTable.getSelectedRowCount() == 0) {
+							JOptionPane.showMessageDialog(null, "No rows selected to delete.");
+						} else {
+							int result = JOptionPane.showConfirmDialog(null, "Are you sure you want to delete the selected rows?", "Confirm",
+									JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+							if (result == JOptionPane.YES_OPTION) {
+								deleteSelectedRows();
+								refreshTables();
+							}
+						}
 					}
 				});
 				buttonPanel.add(deleteButton);
@@ -417,7 +448,7 @@ public class SuperMarketFrame extends JFrame {
 		}
 	}
 
-	public void populateProductTable(int userType) throws SQLException {
+	public void populateProductTable() throws SQLException {
 		Statement productStatement = connection.createStatement();
 		ResultSet allProducts = productStatement.executeQuery("SELECT * FROM Product");
 
@@ -534,7 +565,7 @@ public class SuperMarketFrame extends JFrame {
 				"Email Address" }, 0));
 	}
 
-	public void populateMemberTable(int userType) throws SQLException {
+	public void populateMemberTable() throws SQLException {
 
 		if (userType != 2 && userType != 3) {
 			return;
@@ -613,7 +644,7 @@ public class SuperMarketFrame extends JFrame {
 
 	}
 
-	public void populateTransactionTable(int userType, int userID) throws SQLException {
+	public void populateTransactionTable() throws SQLException {
 		if (userType == 0) {
 			return;
 		}
@@ -774,10 +805,10 @@ public class SuperMarketFrame extends JFrame {
 				return null;
 			} else if (column.equals("phonenumber")) {
 				Integer result = stringToIntIfValid(newValue, 10);
-				if (result == null) {
+				if (result == null || newValue.length() != 10) {
 					return null;
 				} else {
-					return stringToIntIfValid(newValue, 10).toString();
+					return newValue;
 				}
 			}
 			return newValue;
@@ -835,7 +866,6 @@ public class SuperMarketFrame extends JFrame {
 			
 			Statement statement = connection.createStatement();
 			for (String updateString : pendingUpdates) {
-				System.out.println(updateString);
 				statement.executeUpdate(updateString);
 			}
 			connection.commit();
@@ -845,6 +875,47 @@ public class SuperMarketFrame extends JFrame {
 			e.printStackTrace();
 		}
 		pendingUpdates.clear();
+	}
+	
+	
+	private void refreshTables() {
+		try {
+			populateProductTable();
+			populateMemberTable();
+			populateTransactionTable();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	
+	private void deleteSelectedRows() {
+			deleteSelectedRowsFromDatabase(productTable, "Product", "pid");
+			
+			// Only delete from Members if user is a manager
+			if (userType == 3) {
+				deleteSelectedRowsFromDatabase(memberTable, "Member", "mid");
+			}			
+	}
+	
+	
+	private void deleteSelectedRowsFromDatabase(JTable table, String tableName, String idName) {
+		try {
+			
+			Statement statement = connection.createStatement();
+			int[] selectedRows = table.getSelectedRows();
+			for (int rowIndex : selectedRows) {
+				int id = (int)table.getValueAt(table.convertRowIndexToModel(rowIndex), table.convertColumnIndexToModel(0));
+				String command = "DELETE FROM " + tableName + " WHERE " + idName + " = " + id;
+				statement.executeUpdate(command);
+			}
+			
+			connection.commit();
+			statement.close();
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 	}
 	
 }
