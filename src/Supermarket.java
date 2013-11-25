@@ -4,49 +4,44 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
-import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 
 import com.teamrocket.supermarket.gui.SuperMarketFrame;
 
 
 
-public class Supermarket extends JFrame {
+public class Supermarket {
 	
 	static Connection connection = null;
 	
 	public static void initConnection() throws SQLException{
 
-	    try {
-	    	
-	    	DriverManager.registerDriver(new oracle.jdbc.driver.OracleDriver());
-	    	
-	    	// Will's login
-			//connection = DriverManager.getConnection("jdbc:oracle:thin:@dbhost.ugrad.cs.ubc.ca:1522:ug", "ora_a1e8", "a35683119");
-	    	
-	    	// Lewis's login
-	    	connection = DriverManager.getConnection("jdbc:oracle:thin:@dbhost.ugrad.cs.ubc.ca:1522:ug", "ora_a5b8", "a31288111");
-	    	
-	    	connection.setAutoCommit(false);
-			
-		} catch (SQLException e) {
-			
-			e.printStackTrace();
-			System.out.println("Failed to connect to Database");
-			JOptionPane.showMessageDialog(null, "Failed to connect to database", "Failed to connect to database", JOptionPane.ERROR_MESSAGE);	
-			
-
-		}
+    	DriverManager.registerDriver(new oracle.jdbc.driver.OracleDriver());
+    	
+    	// Not going to do anything fancy here with password security 
+    	// like using a char array and overwriting the individual values
+    	// or even masking the password field.
+    	String username = "";
+    	String password = "";
+    	username = JOptionPane.showInputDialog("Database username:");
+    	password = JOptionPane.showInputDialog("Database password:");
+    	
+    	connection = DriverManager.getConnection("jdbc:oracle:thin:@dbhost.ugrad.cs.ubc.ca:1522:ug", username, password);
+    	
+    	connection.setAutoCommit(false);
 	}
 	
 	
-	public static void main(String[] args) throws SQLException {
-		
-		initConnection();
+	public static void main(String[] args) {
+		try {
+			initConnection();
+		} catch (SQLException e) {
+			JOptionPane.showMessageDialog(null, "Failed to connect to database", "Failed to connect to database", JOptionPane.ERROR_MESSAGE);
+			System.exit(1);
+		}
 		
 		SuperMarketFrame frame = new SuperMarketFrame(connection);
 		
-		//frame.pack();
 		frame.setSize(1280, 720);
 		frame.setVisible(true);
 		
@@ -57,10 +52,8 @@ public class Supermarket extends JFrame {
 					connection.close();
 					System.exit(0);
 				} catch (SQLException e) {
-					e.printStackTrace();
 					System.out.println("Error while closing the connection upon program exit.");
 					JOptionPane.showMessageDialog(null, "Error while closing the connection upon program exit", "Error while closing the connection upon program exit", JOptionPane.ERROR_MESSAGE);	
-
 				}
 			}
 		});

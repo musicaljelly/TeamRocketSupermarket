@@ -205,7 +205,8 @@ public class SuperMarketFrame extends JFrame {
 
 		userTypeList.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
-				JComboBox<String> userlist = (JComboBox) event.getSource();
+				@SuppressWarnings("unchecked")
+				JComboBox<String> userlist = (JComboBox<String>) event.getSource();
 
 				pendingUpdates.clear();
 				
@@ -216,7 +217,8 @@ public class SuperMarketFrame extends JFrame {
 		userIDList.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
 
-				JComboBox<String> idlist = (JComboBox) event.getSource();
+				@SuppressWarnings("unchecked")
+				JComboBox<String> idlist = (JComboBox<String>) event.getSource();
 				int userIdIndex = idlist.getSelectedIndex();
 				
 				isGroupingByDate = false;
@@ -410,6 +412,8 @@ public class SuperMarketFrame extends JFrame {
 					public void actionPerformed(ActionEvent e) {
 						if (productTable.getSelectedRowCount() == 0) {
 							JOptionPane.showMessageDialog(null, "No rows selected to delete.");
+						} else if (pendingUpdates.size() > 0) {
+							JOptionPane.showMessageDialog(null, "Update or discard your changes before deleting rows.");
 						} else {
 							int result = JOptionPane.showConfirmDialog(null, "Are you sure you want to delete the selected rows?", "Confirm",
 									JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
@@ -484,6 +488,8 @@ public class SuperMarketFrame extends JFrame {
 					public void actionPerformed(ActionEvent e) {
 						if (productTable.getSelectedRowCount() == 0 && memberTable.getSelectedRowCount() == 0) {
 							JOptionPane.showMessageDialog(null, "No rows selected to delete.");
+						} else if (pendingUpdates.size() > 0) {
+							JOptionPane.showMessageDialog(null, "Update or discard your changes before deleting rows.");
 						} else {
 							int result = JOptionPane.showConfirmDialog(null, "Are you sure you want to delete the selected rows?", "Confirm",
 									JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
@@ -523,7 +529,6 @@ public class SuperMarketFrame extends JFrame {
 
 		// For visitors and members
 		if (userType == 0 || userType == 1) {
-			@SuppressWarnings("serial")
 			DefaultTableModel tableModel = new DefaultTableModel(new Object[] { "Name", "Price ($)", "In Stock" }, 0) {
 				@Override
 				public boolean isCellEditable(int row, int column) {
@@ -663,7 +668,6 @@ public class SuperMarketFrame extends JFrame {
 		((DefaultTableModel)memberTable.getModel()).setRowCount(0);
 
 		if (userType == 2) {
-			@SuppressWarnings("serial")
 			DefaultTableModel tableModel = new DefaultTableModel(new Object[] { "MID", "Name", "Home Address",
 					"Phone Number", "Email Address" }, 0) {
 				@Override
@@ -741,7 +745,6 @@ public class SuperMarketFrame extends JFrame {
 		Statement transactionStatement = connection.createStatement();
 
 		if (userType == 1) {
-			@SuppressWarnings("serial")
 			DefaultTableModel tableModel = new DefaultTableModel(new Object[] { "Date", "Type", "Product Name", "Quantity", "Amount" }, 0) {
 				@Override
 				public boolean isCellEditable(int row, int column) {
@@ -771,7 +774,6 @@ public class SuperMarketFrame extends JFrame {
 			}
 
 		} else if (userType == 2 || userType == 3) {
-			@SuppressWarnings("serial")
 			DefaultTableModel tableModel = new DefaultTableModel(new Object[] { "TID", "Date", "Type", "PID",
 					"Product Name", "Quantity", "Amount", "Authorized By", "Card Name", "Card #", "Card Expiry Date" }, 0) {
 				@Override
@@ -947,7 +949,7 @@ public class SuperMarketFrame extends JFrame {
 			formatter.setLenient(false);
 			ParsePosition pos = new ParsePosition(0);
 			Date date = formatter.parse(value, pos);
-			if (date == null) {
+			if (date == null || value.length() != 10) {
 				return null;
 			} else {
 				return value.substring(0, pos.getIndex());
@@ -960,6 +962,7 @@ public class SuperMarketFrame extends JFrame {
 			
 			Statement statement = connection.createStatement();
 			for (String updateString : pendingUpdates) {
+				//System.out.println(updateString);
 				statement.executeUpdate(updateString);
 			}
 			connection.commit();
@@ -1091,7 +1094,6 @@ public class SuperMarketFrame extends JFrame {
 				statement.executeQuery(incomeQuery);
 				statement.executeQuery(outcomeQuery);
 				
-				@SuppressWarnings("serial")
 				DefaultTableModel tableModel = new DefaultTableModel(columns, 0) {
 					@Override
 					public boolean isCellEditable(int row, int column) {
@@ -1202,7 +1204,6 @@ public class SuperMarketFrame extends JFrame {
 				statement.executeQuery(incomeQuery);
 				statement.executeQuery(outcomeQuery);
 				
-				@SuppressWarnings("serial")
 				DefaultTableModel tableModel = new DefaultTableModel(columns, 0) {
 					@Override
 					public boolean isCellEditable(int row, int column) {
