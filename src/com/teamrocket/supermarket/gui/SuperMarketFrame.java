@@ -27,6 +27,8 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.SwingUtilities;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableModel;
@@ -65,8 +67,10 @@ public class SuperMarketFrame extends JFrame {
 	int userID;
 	
 	boolean isGroupingByDate = false;
+	boolean isGroupingByName = false;
 	
-	final JButton groupByDateButton;
+	JButton groupByDateButton;
+	JButton groupByNameButton; 
 	
 	
 	public SuperMarketFrame(Connection conn) {
@@ -103,13 +107,20 @@ public class SuperMarketFrame extends JFrame {
 		// Create the product table
 		productTable = new JTable();
 		productTable.setFillsViewportHeight(true);
-		//productTable.getModel().add
+		productTable.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+			public void valueChanged(ListSelectionEvent event) {
+				try {
+					populateMemberTable();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+			}
+		});
 		
 		productTablePanel = new JPanel();
 		productTablePanel.setLayout(new BoxLayout(productTablePanel, BoxLayout.PAGE_AXIS));
 		productTablePanel.add(new JLabel("Products"));
 		productTablePanel.add(new JScrollPane(productTable));
-		
 
 		// Create the member table
 		memberTable = new JTable();
@@ -133,118 +144,24 @@ public class SuperMarketFrame extends JFrame {
 		
 		JPanel transactionsLabelAndButton = new JPanel();
 		// Leave the line below as is, it's like that for formatting reasons
-		transactionsLabelAndButton.add(new JLabel("Transactions                                                                    "));
+		transactionsLabelAndButton.add(new JLabel("Transactions                                       "));
 		
 		groupByDateButton = new JButton("Group By Date");
 		groupByDateButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
-				
-				if (userID == -1) {
-					JOptionPane.showMessageDialog(null, "Select a user ID first.");
-					return;
-				} else if (transactionTable.getRowCount() <= 0) {
-					JOptionPane.showMessageDialog(null, "This user has no transactions.");
-					return;
-				}
-				
-				
-				((DefaultTableModel)transactionTable.getModel()).setRowCount(0);
-				
-				// List individual transactions
-				if (isGroupingByDate) {
-					groupByDateButton.setText("Group By Date");
-					
-					try {
-						populateTransactionTable();
-					} catch (SQLException e) {
-						e.printStackTrace();
-					}
-					
-					isGroupingByDate = false;
-					
-				// Group by date
-				} else {
-					
-					groupByDateButton.setText("List Individual Transactions");
-
-					String typeCondition = "";
-					Object[] columns = null;
-					if (userType == 1) {
-						typeCondition = "mid = " + userID + " AND ";
-						columns = new Object[] {"Date", "Income (Returns)", "Outcome (Purchases)", "Net"};
-					} else if (userType == 2) {
-						typeCondition = "eid = " + userID + " AND ";
-						columns = new Object[] {"Date", "Income (Purchases)", "Outcome (Returns)", "Net"};
-					} else if (userType == 3) {
-						typeCondition = "";
-						columns = new Object[] {"Date", "Income (Purchases)", "Outcome (Returns)", "Net"};
-					} else {
-						System.out.println("Execution should have never reached this point");
-						return;
-					}
-					
-					try {
-						Statement statement = connection.createStatement();
-						
-						String incomeQuery = "CREATE OR REPLACE VIEW Income AS " + 
-								"SELECT tdate AS t_date, SUM(amount) AS total_income FROM Transaction " + 
-								"WHERE " + typeCondition + "type = 'Return' " + 
-								"GROUP BY tdate";
-						
-						String outcomeQuery = "CREATE OR REPLACE VIEW Outcome AS " +
-								"SELECT tdate AS t_date, SUM(amount) AS total_outcome FROM Transaction " + 
-								"WHERE " + typeCondition + "type = 'Purchase' " +
-								"GROUP BY tdate";
-						
-						String mainQuery = "SELECT a, b, c, NVL(b, 0) - NVL(c, 0) as d " + 
-								"FROM (SELECT Income.t_date AS a, Income.total_income AS " + (userType == 1 ? "b" : "c") + ", Outcome.total_outcome AS " + (userType == 1 ? "c" : "b") + " " + 
-								"FROM Income " +
-								"LEFT JOIN Outcome ON Income.t_date = Outcome.t_date " +
-								"UNION " + 
-								"SELECT Outcome.t_date AS a, Income.total_income AS " + (userType == 1 ? "b" : "c") + ", Outcome.total_outcome AS " + (userType == 1 ? "c" : "b") + " " +
-								"FROM Income " +
-								"RIGHT JOIN Outcome ON Income.t_date = Outcome.t_date)";
-						
-						String dropIncomeQuery = "DROP VIEW Income";
-						
-						String dropOutcomeQuery = "DROP VIEW Outcome";
-						
-						statement.executeQuery(incomeQuery);
-						statement.executeQuery(outcomeQuery);
-						
-						@SuppressWarnings("serial")
-						DefaultTableModel tableModel = new DefaultTableModel(columns, 0) {
-							@Override
-							public boolean isCellEditable(int row, int column) {
-								return false;
-							}
-						};
-						transactionTable.setModel(tableModel);
-						
-						ResultSet results = statement.executeQuery(mainQuery);
-						while (results.next()) {
-							Object[] newRow = new Object[4];
-							newRow[0] = results.getDate("a");
-							newRow[1] = results.getFloat("b");
-							newRow[2] = results.getFloat("c");
-							newRow[3] = results.getFloat("d");
-							((DefaultTableModel)transactionTable.getModel()).addRow(newRow);
-						}
-						
-						statement.executeQuery(dropIncomeQuery);
-						statement.executeQuery(dropOutcomeQuery);
-						
-						statement.close();
-						
-					} catch (SQLException e) {
-						e.printStackTrace();
-					}
-					isGroupingByDate = true;
-				}
+				groupTransactionTableByDate();
 			}
 		});
 		transactionsLabelAndButton.add(groupByDateButton);
+		groupByNameButton = new JButton("Group By PID");
+		groupByNameButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent event) {
+				groupTransactionTableByName();
+			}
+		});
+		transactionsLabelAndButton.add(groupByNameButton);
 		transactionTablePanel.add(transactionsLabelAndButton);
 		transactionTablePanel.add(new JScrollPane(transactionTable));
 
@@ -678,7 +595,32 @@ public class SuperMarketFrame extends JFrame {
 		}
 
 		Statement memberStatement = connection.createStatement();
-		ResultSet allMembers = memberStatement.executeQuery("SELECT * FROM Member");
+		Statement finalStatement = connection.createStatement();
+		
+		ResultSet allMembers;
+		
+		if (productTable.getSelectedRowCount() > 0) {
+			memberStatement.executeUpdate("CREATE TABLE temp_pids(temppid number(9,0) PRIMARY KEY)");
+			
+			for (int rowIndex : productTable.getSelectedRows()) {
+				int pid = (int)productTable.getValueAt(productTable.convertRowIndexToModel(rowIndex), productTable.convertColumnIndexToModel(0));
+				memberStatement.executeUpdate("INSERT INTO temp_pids (temppid) values (" + pid + ")");
+			}
+			connection.commit();
+			
+			finalStatement.executeQuery("CREATE OR REPLACE VIEW tempmembers AS " + 
+										 "SELECT mid FROM Transaction " +
+										 "WHERE pid IN (SELECT temppid FROM temp_pids) " + 
+										 "GROUP BY mid " + 
+										 "HAVING COUNT(DISTINCT pid) >= (SELECT COUNT(*) FROM temp_pids)");
+			
+			allMembers = finalStatement.executeQuery("SELECT * FROM Member INNER JOIN tempmembers ON Member.mid = tempmembers.mid");
+			
+			memberStatement.executeUpdate("DROP TABLE temp_pids");
+			connection.commit();
+		} else {
+			allMembers = memberStatement.executeQuery("SELECT * FROM Member");
+		}
 
 		((DefaultTableModel)memberTable.getModel()).setRowCount(0);
 
@@ -747,6 +689,9 @@ public class SuperMarketFrame extends JFrame {
 			newRow[4] = allMembers.getString("emailaddress");
 			((DefaultTableModel) memberTable.getModel()).addRow(newRow);
 		}
+		
+		memberStatement.close();
+		finalStatement.close();
 
 	}
 
@@ -1023,4 +968,224 @@ public class SuperMarketFrame extends JFrame {
 		}
 	}
 	
+	private void groupTransactionTableByDate() {
+		if (userID == -1) {
+			JOptionPane.showMessageDialog(null, "Select a user ID first.");
+			return;
+		} else if (transactionTable.getRowCount() <= 0 && userType != 3) {
+			JOptionPane.showMessageDialog(null, "This user has no transactions logged.");
+			return;
+		} else if (transactionTable.getRowCount() <= 0 && userType == 3) {
+			JOptionPane.showMessageDialog(null, "There are no transactions logged.");
+			return;
+		}
+		
+		isGroupingByName = false;
+		groupByNameButton.setText("Group By PID");
+		
+		((DefaultTableModel)transactionTable.getModel()).setRowCount(0);
+		
+		// List individual transactions
+		if (isGroupingByDate) {
+			groupByDateButton.setText("Group By Date");
+			
+			try {
+				populateTransactionTable();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+			
+			isGroupingByDate = false;
+			
+		// Group by date
+		} else {
+			
+			groupByDateButton.setText("List Individual Transactions");
+	
+			String typeCondition = "";
+			Object[] columns = null;
+			if (userType == 1) {
+				typeCondition = "mid = " + userID + " AND ";
+				columns = new Object[] {"Date", "Income (Returns)", "Outcome (Purchases)", "Net"};
+			} else if (userType == 2) {
+				typeCondition = "eid = " + userID + " AND ";
+				columns = new Object[] {"Date", "Income (Purchases)", "Outcome (Returns)", "Net"};
+			} else if (userType == 3) {
+				typeCondition = "";
+				columns = new Object[] {"Date", "Income (Purchases)", "Outcome (Returns)", "Net"};
+			} else {
+				System.out.println("Execution should have never reached this point");
+				return;
+			}
+			
+			try {
+				Statement statement = connection.createStatement();
+				
+				String incomeQuery = "CREATE OR REPLACE VIEW Income AS " + 
+						"SELECT tdate AS t_date, SUM(amount) AS total_income FROM Transaction " + 
+						"WHERE " + typeCondition + "type = 'Return' " + 
+						"GROUP BY tdate";
+				
+				String outcomeQuery = "CREATE OR REPLACE VIEW Outcome AS " +
+						"SELECT tdate AS t_date, SUM(amount) AS total_outcome FROM Transaction " + 
+						"WHERE " + typeCondition + "type = 'Purchase' " +
+						"GROUP BY tdate";
+				
+				String mainQuery = "SELECT a, b, c, NVL(b, 0) - NVL(c, 0) as d " + 
+						"FROM (SELECT Income.t_date AS a, Income.total_income AS " + (userType == 1 ? "b" : "c") + ", Outcome.total_outcome AS " + (userType == 1 ? "c" : "b") + " " + 
+						"FROM Income " +
+						"LEFT JOIN Outcome ON Income.t_date = Outcome.t_date " +
+						"UNION " + 
+						"SELECT Outcome.t_date AS a, Income.total_income AS " + (userType == 1 ? "b" : "c") + ", Outcome.total_outcome AS " + (userType == 1 ? "c" : "b") + " " +
+						"FROM Income " +
+						"RIGHT JOIN Outcome ON Income.t_date = Outcome.t_date)";
+				
+				String dropIncomeQuery = "DROP VIEW Income";
+				
+				String dropOutcomeQuery = "DROP VIEW Outcome";
+				
+				statement.executeQuery(incomeQuery);
+				statement.executeQuery(outcomeQuery);
+				
+				@SuppressWarnings("serial")
+				DefaultTableModel tableModel = new DefaultTableModel(columns, 0) {
+					@Override
+					public boolean isCellEditable(int row, int column) {
+						return false;
+					}
+				};
+				transactionTable.setModel(tableModel);
+				
+				ResultSet results = statement.executeQuery(mainQuery);
+				while (results.next()) {
+					Object[] newRow = new Object[4];
+					newRow[0] = results.getDate("a");
+					newRow[1] = results.getFloat("b");
+					newRow[2] = results.getFloat("c");
+					newRow[3] = results.getFloat("d");
+					((DefaultTableModel)transactionTable.getModel()).addRow(newRow);
+				}
+				
+				statement.executeQuery(dropIncomeQuery);
+				statement.executeQuery(dropOutcomeQuery);
+				
+				statement.close();
+				
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+			isGroupingByDate = true;
+		}
+	}
+	
+	
+	private void groupTransactionTableByName() {
+		if (userID == -1) {
+			JOptionPane.showMessageDialog(null, "Select a user ID first.");
+			return;
+		} else if (transactionTable.getRowCount() <= 0 && userType != 3) {
+			JOptionPane.showMessageDialog(null, "This user has no transactions logged.");
+			return;
+		} else if (transactionTable.getRowCount() <= 0 && userType == 3) {
+			JOptionPane.showMessageDialog(null, "There are no transactions logged.");
+			return;
+		}
+		
+		isGroupingByDate = false;
+		groupByDateButton.setText("Group By Date");
+		
+		((DefaultTableModel)transactionTable.getModel()).setRowCount(0);
+		
+		// List individual transactions
+		if (isGroupingByName) {
+			groupByNameButton.setText("Group By PID");
+			
+			try {
+				populateTransactionTable();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+			
+			isGroupingByName = false;
+			
+		// Group by name
+		} else {
+			
+			groupByNameButton.setText("List Individual Transactions");
+	
+			String typeCondition = "";
+			Object[] columns = null;
+			if (userType == 1) {
+				typeCondition = "mid = " + userID + " AND ";
+				columns = new Object[] {"PID", "Income (Returns)", "Outcome (Purchases)", "Net"};
+			} else if (userType == 2) {
+				typeCondition = "eid = " + userID + " AND ";
+				columns = new Object[] {"PID", "Income (Purchases)", "Outcome (Returns)", "Net"};
+			} else if (userType == 3) {
+				typeCondition = "";
+				columns = new Object[] {"PID", "Income (Purchases)", "Outcome (Returns)", "Net"};
+			} else {
+				System.out.println("Execution should have never reached this point");
+				return;
+			}
+			
+			try {
+				Statement statement = connection.createStatement();
+				
+				String incomeQuery = "CREATE OR REPLACE VIEW Income AS " + 
+						"SELECT pid AS t_pid, SUM(amount) AS total_income FROM Transaction " + 
+						"WHERE " + typeCondition + "type = 'Return' " + 
+						"GROUP BY pid";
+				
+				String outcomeQuery = "CREATE OR REPLACE VIEW Outcome AS " +
+						"SELECT pid AS t_pid, SUM(amount) AS total_outcome FROM Transaction " + 
+						"WHERE " + typeCondition + "type = 'Purchase' " +
+						"GROUP BY pid";
+				
+				String mainQuery = "SELECT a, b, c, NVL(b, 0) - NVL(c, 0) as d " + 
+						"FROM (SELECT Income.t_pid AS a, Income.total_income AS " + (userType == 1 ? "b" : "c") + ", Outcome.total_outcome AS " + (userType == 1 ? "c" : "b") + " " + 
+						"FROM Income " +
+						"LEFT JOIN Outcome ON Income.t_pid = Outcome.t_pid " +
+						"UNION " + 
+						"SELECT Outcome.t_pid AS a, Income.total_income AS " + (userType == 1 ? "b" : "c") + ", Outcome.total_outcome AS " + (userType == 1 ? "c" : "b") + " " +
+						"FROM Income " +
+						"RIGHT JOIN Outcome ON Income.t_pid = Outcome.t_pid)";
+				
+				String dropIncomeQuery = "DROP VIEW Income";
+				
+				String dropOutcomeQuery = "DROP VIEW Outcome";
+				
+				statement.executeQuery(incomeQuery);
+				statement.executeQuery(outcomeQuery);
+				
+				@SuppressWarnings("serial")
+				DefaultTableModel tableModel = new DefaultTableModel(columns, 0) {
+					@Override
+					public boolean isCellEditable(int row, int column) {
+						return false;
+					}
+				};
+				transactionTable.setModel(tableModel);
+				
+				ResultSet results = statement.executeQuery(mainQuery);
+				while (results.next()) {
+					Object[] newRow = new Object[4];
+					newRow[0] = results.getInt("a");
+					newRow[1] = results.getFloat("b");
+					newRow[2] = results.getFloat("c");
+					newRow[3] = results.getFloat("d");
+					((DefaultTableModel)transactionTable.getModel()).addRow(newRow);
+				}
+				
+				statement.executeQuery(dropIncomeQuery);
+				statement.executeQuery(dropOutcomeQuery);
+				
+				statement.close();
+				
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+			isGroupingByName = true;
+		}
+	}
 }
