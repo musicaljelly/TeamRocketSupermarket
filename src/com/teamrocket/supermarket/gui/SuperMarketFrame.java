@@ -64,6 +64,10 @@ public class SuperMarketFrame extends JFrame {
 	int userType;
 	int userID;
 	
+	boolean isGroupingByDate = false;
+	
+	final JButton groupByDateButton;
+	
 	
 	public SuperMarketFrame(Connection conn) {
 		super("Supermarket Application");
@@ -131,12 +135,113 @@ public class SuperMarketFrame extends JFrame {
 		// Leave the line below as is, it's like that for formatting reasons
 		transactionsLabelAndButton.add(new JLabel("Transactions                                                                    "));
 		
-		JButton groupByDateButton = new JButton("Group By Date");
+		groupByDateButton = new JButton("Group By Date");
 		groupByDateButton.addActionListener(new ActionListener() {
 			@Override
-			public void actionPerformed(ActionEvent arg0) {
-				// TODO add sql filter query stuff thingies
+			public void actionPerformed(ActionEvent event) {
 				
+				if (userID == -1) {
+					JOptionPane.showMessageDialog(null, "Select a user ID first.");
+					return;
+				} else if (transactionTable.getRowCount() <= 0) {
+					JOptionPane.showMessageDialog(null, "This user has no transactions.");
+					return;
+				}
+				
+				
+				((DefaultTableModel)transactionTable.getModel()).setRowCount(0);
+				
+				// List individual transactions
+				if (isGroupingByDate) {
+					groupByDateButton.setText("Group By Date");
+					
+					try {
+						populateTransactionTable();
+					} catch (SQLException e) {
+						e.printStackTrace();
+					}
+					
+					isGroupingByDate = false;
+					
+				// Group by date
+				} else {
+					
+					groupByDateButton.setText("List Individual Transactions");
+
+					String typeCondition = "";
+					Object[] columns = null;
+					if (userType == 1) {
+						typeCondition = "mid = " + userID + " AND ";
+						columns = new Object[] {"Date", "Income (Returns)", "Outcome (Purchases)", "Net"};
+					} else if (userType == 2) {
+						typeCondition = "eid = " + userID + " AND ";
+						columns = new Object[] {"Date", "Income (Purchases)", "Outcome (Returns)", "Net"};
+					} else if (userType == 3) {
+						typeCondition = "";
+						columns = new Object[] {"Date", "Income (Purchases)", "Outcome (Returns)", "Net"};
+					} else {
+						System.out.println("Execution should have never reached this point");
+						return;
+					}
+					
+					try {
+						Statement statement = connection.createStatement();
+						
+						String incomeQuery = "CREATE OR REPLACE VIEW Income AS " + 
+								"SELECT tdate AS t_date, SUM(amount) AS total_income FROM Transaction " + 
+								"WHERE " + typeCondition + "type = 'Return' " + 
+								"GROUP BY tdate";
+						
+						String outcomeQuery = "CREATE OR REPLACE VIEW Outcome AS " +
+								"SELECT tdate AS t_date, SUM(amount) AS total_outcome FROM Transaction " + 
+								"WHERE " + typeCondition + "type = 'Purchase' " +
+								"GROUP BY tdate";
+						
+						String mainQuery = "SELECT a, b, c, NVL(b, 0) - NVL(c, 0) as d " + 
+								"FROM (SELECT Income.t_date AS a, Income.total_income AS " + (userType == 1 ? "b" : "c") + ", Outcome.total_outcome AS " + (userType == 1 ? "c" : "b") + " " + 
+								"FROM Income " +
+								"LEFT JOIN Outcome ON Income.t_date = Outcome.t_date " +
+								"UNION " + 
+								"SELECT Outcome.t_date AS a, Income.total_income AS " + (userType == 1 ? "b" : "c") + ", Outcome.total_outcome AS " + (userType == 1 ? "c" : "b") + " " +
+								"FROM Income " +
+								"RIGHT JOIN Outcome ON Income.t_date = Outcome.t_date)";
+						
+						String dropIncomeQuery = "DROP VIEW Income";
+						
+						String dropOutcomeQuery = "DROP VIEW Outcome";
+						
+						statement.executeQuery(incomeQuery);
+						statement.executeQuery(outcomeQuery);
+						
+						@SuppressWarnings("serial")
+						DefaultTableModel tableModel = new DefaultTableModel(columns, 0) {
+							@Override
+							public boolean isCellEditable(int row, int column) {
+								return false;
+							}
+						};
+						transactionTable.setModel(tableModel);
+						
+						ResultSet results = statement.executeQuery(mainQuery);
+						while (results.next()) {
+							Object[] newRow = new Object[4];
+							newRow[0] = results.getDate("a");
+							newRow[1] = results.getFloat("b");
+							newRow[2] = results.getFloat("c");
+							newRow[3] = results.getFloat("d");
+							((DefaultTableModel)transactionTable.getModel()).addRow(newRow);
+						}
+						
+						statement.executeQuery(dropIncomeQuery);
+						statement.executeQuery(dropOutcomeQuery);
+						
+						statement.close();
+						
+					} catch (SQLException e) {
+						e.printStackTrace();
+					}
+					isGroupingByDate = true;
+				}
 			}
 		});
 		transactionsLabelAndButton.add(groupByDateButton);
@@ -163,6 +268,9 @@ public class SuperMarketFrame extends JFrame {
 
 				JComboBox<String> idlist = (JComboBox) event.getSource();
 				int userIdIndex = idlist.getSelectedIndex();
+				
+				isGroupingByDate = false;
+				groupByDateButton.setText("Group By Date");
 				
 				pendingUpdates.clear();
 
@@ -248,6 +356,9 @@ public class SuperMarketFrame extends JFrame {
 
 		CardLayout cardLayout = (CardLayout) tablePanel.getLayout();
 		cardLayout.show(tablePanel, userTypes[userType]);
+		
+		isGroupingByDate = false;
+		groupByDateButton.setText("Group By Date");
 
 		try {
 			statement = connection.createStatement();
@@ -559,11 +670,6 @@ public class SuperMarketFrame extends JFrame {
 		productStatement.close();
 	}
 
-	public void clearMemberTable() {
-		memberTable.removeAll();
-		memberTable.setModel(new DefaultTableModel(new Object[] { "MID", "Name", "Home Address", "Phone Number",
-				"Email Address" }, 0));
-	}
 
 	public void populateMemberTable() throws SQLException {
 
@@ -574,7 +680,7 @@ public class SuperMarketFrame extends JFrame {
 		Statement memberStatement = connection.createStatement();
 		ResultSet allMembers = memberStatement.executeQuery("SELECT * FROM Member");
 
-		clearMemberTable();
+		((DefaultTableModel)memberTable.getModel()).setRowCount(0);
 
 		if (userType == 2) {
 			@SuppressWarnings("serial")
@@ -704,8 +810,7 @@ public class SuperMarketFrame extends JFrame {
 						   "    FROM joinedcardtransactions " + 
 						   "    INNER JOIN Product " + 
 						   "    ON Product.pid = joinedcardtransactions.pid) " + 
-						   "WHERE eid = " + userID;
-
+						   ((userType == 2) ? "WHERE eid = " + userID : "");  // Show only employees transactions if employee, otherwise if manager, show all transactions
 			String deleteQuery = "DROP VIEW joinedcardtransactions";
 
 			transactionStatement.executeQuery(viewQuery);
@@ -728,7 +833,7 @@ public class SuperMarketFrame extends JFrame {
 					newRow[10] = "N/A";
 				} else {
 					newRow[8] = transactions.getString("cardname");
-					newRow[9] = transactions.getInt("cardnum");
+					newRow[9] = transactions.getString("cardnum");
 					newRow[10] = transactions.getDate("cardexpiry");
 				}
 

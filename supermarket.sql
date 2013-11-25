@@ -70,7 +70,7 @@ CREATE TABLE CashTransaction(
 		
 CREATE TABLE CreditCardTransaction(
 		tid number(9,0) PRIMARY KEY,
-		cardnum number(20,0),
+		cardnum varchar(20),
 		cardname varchar(50),
 		cardexpiry date,
 		FOREIGN KEY (tid) REFERENCES Transaction(tid) ON DELETE CASCADE
@@ -161,12 +161,12 @@ insert into CashTransaction(tid) values (4);
 insert into CashTransaction(tid) values (6);
 insert into CashTransaction(tid) values (10);
 
-insert into CreditCardTransaction(tid,cardnum,cardname,cardexpiry) values (3,1234567890,'Christine H', '2015-10-10');
-insert into CreditCardTransaction(tid,cardnum,cardname,cardexpiry) values (5,1234567890,'Christine H', '2015-10-10');
-insert into CreditCardTransaction(tid,cardnum,cardname,cardexpiry) values (7,1357246805,'D Hamhuisen', '2015-03-07');
-insert into CreditCardTransaction(tid,cardnum,cardname,cardexpiry) values (8,1357246805,'D Hamhuisen', '2015-03-07');
-insert into CreditCardTransaction(tid,cardnum,cardname,cardexpiry) values (9,2468135791,'C Sheen', '2015-05-17');
-insert into CreditCardTransaction(tid,cardnum,cardname,cardexpiry) values (11,2468135791,'C Sheen', '2015-05-17');
+insert into CreditCardTransaction(tid,cardnum,cardname,cardexpiry) values (3,'1234567890','Christine H', '2015-10-10');
+insert into CreditCardTransaction(tid,cardnum,cardname,cardexpiry) values (5,'1234567890','Christine H', '2015-10-10');
+insert into CreditCardTransaction(tid,cardnum,cardname,cardexpiry) values (7,'1357246805','D Hamhuisen', '2015-03-07');
+insert into CreditCardTransaction(tid,cardnum,cardname,cardexpiry) values (8,'1357246805','D Hamhuisen', '2015-03-07');
+insert into CreditCardTransaction(tid,cardnum,cardname,cardexpiry) values (9,'2468135791','C Sheen', '2015-05-17');
+insert into CreditCardTransaction(tid,cardnum,cardname,cardexpiry) values (11,'2468135791','C Sheen', '2015-05-17');
 
 insert into Updates(upid,udate,eid,pid) values (1, '2013-10-19', 945214963,298774445);
 insert into Updates(upid,udate,eid,pid) values (2, '2013-10-19', 924863556,400149621);
