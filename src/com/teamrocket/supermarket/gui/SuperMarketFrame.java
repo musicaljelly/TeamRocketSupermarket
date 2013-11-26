@@ -56,6 +56,8 @@ public class SuperMarketFrame extends JFrame {
 	JTable memberTable;
 	JTable transactionTable;
 
+	JLabel tableLabel;
+	
 	final JButton accDetailsButton;
 	
 	List<String> pendingUpdates = new ArrayList<String>();
@@ -94,6 +96,8 @@ public class SuperMarketFrame extends JFrame {
 		memberPanel = new JPanel();
 		employeePanel = new JPanel();
 		managerPanel = new JPanel();
+		
+		tableLabel = new JLabel();
 
 		tablePanel.add(visitorPanel, userTypes[0]);
 		tablePanel.add(memberPanel, userTypes[1]);
@@ -123,7 +127,8 @@ public class SuperMarketFrame extends JFrame {
 		
 		productTablePanel = new JPanel();
 		productTablePanel.setLayout(new BoxLayout(productTablePanel, BoxLayout.PAGE_AXIS));
-		productTablePanel.add(new JLabel("Products"));
+		tableLabel.setText("Products");
+		productTablePanel.add(tableLabel);
 		productTablePanel.add(new JScrollPane(productTable));
 
 		// Create the member table
@@ -628,6 +633,16 @@ public class SuperMarketFrame extends JFrame {
 			// Execution should never reach this point
 		}
 
+		// Add count to product label
+		ResultSet countSet = productStatement.executeQuery("SELECT COUNT(*) AS C FROM PRODUCT");
+		countSet.next();
+		int productCount = countSet.getInt("C");
+		
+		ResultSet avgPriceSet = productStatement.executeQuery("SELECT AVG(PRICE) AS A FROM PRODUCT");
+		avgPriceSet.next();		
+		double average = Math.round(avgPriceSet.getFloat("A") * 100.0) / 100.0;
+		
+		tableLabel.setText("Products                             Number of Products: " + productCount + "                   Average Price: " + average);
 		productStatement.close();
 	}
 
@@ -1053,13 +1068,13 @@ public class SuperMarketFrame extends JFrame {
 			Object[] columns = null;
 			if (userType == 1) {
 				typeCondition = "mid = " + userID + " AND ";
-				columns = new Object[] {"Date", "Income (Returns)", "Outcome (Purchases)", "Net"};
+				columns = new Object[] {"Date", "Income (Returns)", "Outcome (Purchases)", "Net", "Number of Transactions"};
 			} else if (userType == 2) {
 				typeCondition = "eid = " + userID + " AND ";
-				columns = new Object[] {"Date", "Income (Purchases)", "Outcome (Returns)", "Net"};
+				columns = new Object[] {"Date", "Income (Purchases)", "Outcome (Returns)", "Net", "Number of Transactions"};
 			} else if (userType == 3) {
 				typeCondition = "";
-				columns = new Object[] {"Date", "Income (Purchases)", "Outcome (Returns)", "Net"};
+				columns = new Object[] {"Date", "Income (Purchases)", "Outcome (Returns)", "Net", "Number of Transactions"};
 			} else {
 				System.out.println("Execution should have never reached this point");
 				return;
@@ -1069,21 +1084,21 @@ public class SuperMarketFrame extends JFrame {
 				Statement statement = connection.createStatement();
 				
 				String incomeQuery = "CREATE OR REPLACE VIEW Income AS " + 
-						"SELECT tdate AS t_date, SUM(amount) AS total_income FROM Transaction " + 
+						"SELECT tdate AS t_date, SUM(amount) AS total_income, COUNT(*) AS income_count FROM Transaction " + 
 						"WHERE " + typeCondition + "type = 'Return' " + 
 						"GROUP BY tdate";
 				
 				String outcomeQuery = "CREATE OR REPLACE VIEW Outcome AS " +
-						"SELECT tdate AS t_date, SUM(amount) AS total_outcome FROM Transaction " + 
+						"SELECT tdate AS t_date, SUM(amount) AS total_outcome, COUNT(*) AS outcome_count FROM Transaction " + 
 						"WHERE " + typeCondition + "type = 'Purchase' " +
 						"GROUP BY tdate";
 				
-				String mainQuery = "SELECT a, b, c, NVL(b, 0) - NVL(c, 0) as d " + 
-						"FROM (SELECT Income.t_date AS a, Income.total_income AS " + (userType == 1 ? "b" : "c") + ", Outcome.total_outcome AS " + (userType == 1 ? "c" : "b") + " " + 
+				String mainQuery = "SELECT a, b, c, NVL(b, 0) - NVL(c, 0) as d, NVL(ic, 0) + NVL(oc, 0) AS e " + 
+						"FROM (SELECT Income.t_date AS a, Income.total_income AS " + (userType == 1 ? "b" : "c") + ", Outcome.total_outcome AS " + (userType == 1 ? "c" : "b") + ", Income.income_count AS ic" +  ", Outcome.outcome_count AS oc " + 
 						"FROM Income " +
 						"LEFT JOIN Outcome ON Income.t_date = Outcome.t_date " +
 						"UNION " + 
-						"SELECT Outcome.t_date AS a, Income.total_income AS " + (userType == 1 ? "b" : "c") + ", Outcome.total_outcome AS " + (userType == 1 ? "c" : "b") + " " +
+						"SELECT Outcome.t_date AS a, Income.total_income AS " + (userType == 1 ? "b" : "c") + ", Outcome.total_outcome AS " + (userType == 1 ? "c" : "b") + ", Income.income_count AS ic" +  ", Outcome.outcome_count AS oc " + 
 						"FROM Income " +
 						"RIGHT JOIN Outcome ON Income.t_date = Outcome.t_date)";
 				
@@ -1104,11 +1119,12 @@ public class SuperMarketFrame extends JFrame {
 				
 				ResultSet results = statement.executeQuery(mainQuery);
 				while (results.next()) {
-					Object[] newRow = new Object[4];
+					Object[] newRow = new Object[5];
 					newRow[0] = results.getDate("a");
 					newRow[1] = results.getFloat("b");
 					newRow[2] = results.getFloat("c");
 					newRow[3] = results.getFloat("d");
+					newRow[4] = results.getFloat("e");
 					((DefaultTableModel)transactionTable.getModel()).addRow(newRow);
 				}
 				
@@ -1163,13 +1179,13 @@ public class SuperMarketFrame extends JFrame {
 			Object[] columns = null;
 			if (userType == 1) {
 				typeCondition = "mid = " + userID + " AND ";
-				columns = new Object[] {"PID", "Income (Returns)", "Outcome (Purchases)", "Net"};
+				columns = new Object[] {"PID", "Income (Returns)", "Outcome (Purchases)", "Net", "Number of Transactions"};
 			} else if (userType == 2) {
 				typeCondition = "eid = " + userID + " AND ";
-				columns = new Object[] {"PID", "Income (Purchases)", "Outcome (Returns)", "Net"};
+				columns = new Object[] {"PID", "Income (Purchases)", "Outcome (Returns)", "Net", "Number of Transactions"};
 			} else if (userType == 3) {
 				typeCondition = "";
-				columns = new Object[] {"PID", "Income (Purchases)", "Outcome (Returns)", "Net"};
+				columns = new Object[] {"PID", "Income (Purchases)", "Outcome (Returns)", "Net", "Number of Transactions"};
 			} else {
 				System.out.println("Execution should have never reached this point");
 				return;
@@ -1179,21 +1195,21 @@ public class SuperMarketFrame extends JFrame {
 				Statement statement = connection.createStatement();
 				
 				String incomeQuery = "CREATE OR REPLACE VIEW Income AS " + 
-						"SELECT pid AS t_pid, SUM(amount) AS total_income FROM Transaction " + 
+						"SELECT pid AS t_pid, SUM(amount) AS total_income, COUNT(*) AS income_count FROM Transaction " + 
 						"WHERE " + typeCondition + "type = 'Return' " + 
 						"GROUP BY pid";
 				
 				String outcomeQuery = "CREATE OR REPLACE VIEW Outcome AS " +
-						"SELECT pid AS t_pid, SUM(amount) AS total_outcome FROM Transaction " + 
+						"SELECT pid AS t_pid, SUM(amount) AS total_outcome, COUNT(*) AS outcome_count FROM Transaction " + 
 						"WHERE " + typeCondition + "type = 'Purchase' " +
 						"GROUP BY pid";
 				
-				String mainQuery = "SELECT a, b, c, NVL(b, 0) - NVL(c, 0) as d " + 
-						"FROM (SELECT Income.t_pid AS a, Income.total_income AS " + (userType == 1 ? "b" : "c") + ", Outcome.total_outcome AS " + (userType == 1 ? "c" : "b") + " " + 
+				String mainQuery = "SELECT a, b, c, NVL(b, 0) - NVL(c, 0) as d, NVL(ic, 0) + NVL(oc, 0) AS e " + 
+						"FROM (SELECT Income.t_pid AS a, Income.total_income AS " + (userType == 1 ? "b" : "c") + ", Outcome.total_outcome AS " + (userType == 1 ? "c" : "b") + ", Income.income_count AS ic" +  ", Outcome.outcome_count AS oc " +  
 						"FROM Income " +
 						"LEFT JOIN Outcome ON Income.t_pid = Outcome.t_pid " +
 						"UNION " + 
-						"SELECT Outcome.t_pid AS a, Income.total_income AS " + (userType == 1 ? "b" : "c") + ", Outcome.total_outcome AS " + (userType == 1 ? "c" : "b") + " " +
+						"SELECT Outcome.t_pid AS a, Income.total_income AS " + (userType == 1 ? "b" : "c") + ", Outcome.total_outcome AS " + (userType == 1 ? "c" : "b") + ", Income.income_count AS ic" +  ", Outcome.outcome_count AS oc " + 
 						"FROM Income " +
 						"RIGHT JOIN Outcome ON Income.t_pid = Outcome.t_pid)";
 				
@@ -1214,11 +1230,12 @@ public class SuperMarketFrame extends JFrame {
 				
 				ResultSet results = statement.executeQuery(mainQuery);
 				while (results.next()) {
-					Object[] newRow = new Object[4];
+					Object[] newRow = new Object[5];
 					newRow[0] = results.getInt("a");
 					newRow[1] = results.getFloat("b");
 					newRow[2] = results.getFloat("c");
 					newRow[3] = results.getFloat("d");
+					newRow[4] = results.getFloat("e");
 					((DefaultTableModel)transactionTable.getModel()).addRow(newRow);
 				}
 				
