@@ -27,8 +27,9 @@ public class Supermarket {
     	password = JOptionPane.showInputDialog("Database password:");
     	
     	
-//    	connection = DriverManager.getConnection("jdbc:oracle:thin:@dbhost.ugrad.cs.ubc.ca:1522:ug", username, password);
-    	connection = DriverManager.getConnection("jdbc:oracle:thin:@dbhost.ugrad.cs.ubc.ca:1522:ug", "ora_a5b8", "a31288111");
+    	connection = DriverManager.getConnection("jdbc:oracle:thin:@dbhost.ugrad.cs.ubc.ca:1522:ug", username, password);
+//    	For Lewis's use:  "ora_a5b8", "a31288111"
+//    	For Will's use: "ora_a1e8", "a35683119"
     	
     	connection.setAutoCommit(false);
 	}

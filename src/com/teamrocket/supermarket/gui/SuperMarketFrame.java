@@ -789,7 +789,7 @@ public class SuperMarketFrame extends JFrame {
 			}
 
 		} else if (userType == 2 || userType == 3) {
-			DefaultTableModel tableModel = new DefaultTableModel(new Object[] { "TID", "Date", "Type", "PID",
+			DefaultTableModel tableModel = new DefaultTableModel(new Object[] { "TID", "Date", "Type", "PID", "MID",
 					"Product Name", "Quantity", "Amount", "Authorized By", "Card Name", "Card #", "Card Expiry Date" }, 0) {
 				@Override
 				public boolean isCellEditable(int row, int column) {
@@ -817,24 +817,25 @@ public class SuperMarketFrame extends JFrame {
 			ResultSet transactions = transactionStatement.executeQuery(query);
 
 			while (transactions.next()) {
-				Object[] newRow = new Object[11];
+				Object[] newRow = new Object[12];
 				newRow[0] = transactions.getInt("tid");
 				newRow[1] = transactions.getDate("tdate");
 				newRow[2] = transactions.getString("type");
 				newRow[3] = transactions.getInt("pid");
-				newRow[4] = transactions.getString("name");
-				newRow[5] = transactions.getInt("quantity");
-				newRow[6] = transactions.getFloat("amount");
-				newRow[7] = transactions.getInt("eid");
+				newRow[4] = transactions.getInt("mid");
+				newRow[5] = transactions.getString("name");
+				newRow[6] = transactions.getInt("quantity");
+				newRow[7] = transactions.getFloat("amount");
+				newRow[8] = transactions.getInt("eid");
 
 				if (transactions.getObject("cardname") == null || transactions.getObject("cardnum") == null || transactions.getObject("cardexpiry") == null) {
-					newRow[8] = "N/A";
 					newRow[9] = "N/A";
 					newRow[10] = "N/A";
+					newRow[11] = "N/A";
 				} else {
-					newRow[8] = transactions.getString("cardname");
-					newRow[9] = transactions.getString("cardnum");
-					newRow[10] = transactions.getDate("cardexpiry");
+					newRow[9] = transactions.getString("cardname");
+					newRow[10] = transactions.getString("cardnum");
+					newRow[11] = transactions.getDate("cardexpiry");
 				}
 
 				((DefaultTableModel) transactionTable.getModel()).addRow(newRow);
