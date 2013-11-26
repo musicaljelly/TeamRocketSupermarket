@@ -126,12 +126,12 @@ insert into Product (pid,name,stock,cost,price) values (347411156, 'Escape Rope'
 insert into Product (pid,name,stock,cost,price) values (310014852, 'Max Repel',180,31.25,75.00);
 insert into Product (pid,name,stock,cost,price) values (422511230, 'Potion',140,6.75,20.00);
 insert into Product (pid,name,stock,cost,price) values (488012019, 'Super Potion',120,15.00,54.25);
-insert into Product (pid,name,stock,cost,memberprice,price) values (274783610, 'Ultra Ball',240,5.50,12.50,10.25);
-insert into Product (pid,name,stock,cost,memberprice,price) values (388181563, 'Repel',100,1.25,14.50,13.25);
-insert into Product (pid,name,stock,cost,memberprice,price) values (344100254, 'Super Repel',120,2.50,38.50,35.25);
-insert into Product (pid,name,stock,cost,memberprice,price) values (492014200, 'Hyper Potion',250,30.50,118.25,113.75);
-insert into Product (pid,name,stock,cost,memberprice,price) values (455102458, 'Max Potion',300,62.50,210.25,198.00);
-insert into Product (pid,name,stock,cost,memberprice,price) values (400149621, 'Revive',300,44.25,154.75,148.75);
+insert into Product (pid,name,stock,cost,price,memberprice) values (274783610, 'Ultra Ball',240,5.50,12.50,10.25);
+insert into Product (pid,name,stock,cost,price,memberprice) values (388181563, 'Repel',100,1.25,14.50,13.25);
+insert into Product (pid,name,stock,cost,price,memberprice) values (344100254, 'Super Repel',120,2.50,38.50,35.25);
+insert into Product (pid,name,stock,cost,price,memberprice) values (492014200, 'Hyper Potion',250,30.50,118.25,113.75);
+insert into Product (pid,name,stock,cost,price,memberprice) values (455102458, 'Max Potion',300,62.50,210.25,198.00);
+insert into Product (pid,name,stock,cost,price,memberprice) values (400149621, 'Revive',300,44.25,154.75,148.75);
 
 
 insert into Transaction(tid,quantity,tdate,amount,pid,eid,mid,type) 
